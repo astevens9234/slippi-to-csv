@@ -1,3 +1,10 @@
+// Convert .slp files to .csv or .json files for downstream processing and Deep Learning.
+//
+// This package contains two callables;
+//   - gameToJSON
+//   - gameToCSV
+//
+// .slp files will be read from /slp and written to either /csv or /json depending on function call.
 package main
 
 import (
@@ -13,34 +20,38 @@ import (
 	slippi "github.com/pmcca/go-slippi"
 )
 
-/*	- Work through csv mapping
-	- Read all slp from /slippi
-	- Write all csv to /output
-	- Concurrency
+/*	- Work through csv mapping		[X]
+	- Read all slp from /slp		[X]
+	- Write all csv to /csv & /json	[X]
+	- Concurrency					[]
 */
 
 func main() {
+	// 450 files in 5 minutes
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	filePath := "Day 3-Game_20210718T094500.slp"
-	game, err := slippi.ParseGame(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	bulkProcessing()
 
-	gameToJSON(game)
-	gameToCSV(game)
+	// Create a single file -- reference
+	// filePath := "slp/Day 3-Game_20210718T094500.slp"
+	// game, err := slippi.ParseGame(filePath)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// gameToJSON(game, "json/Sample.json")
+	// gameToCSV(game, "csv/Sample.csv")
 
 }
 
 // Write .slp to .json
-func gameToJSON(g interface{}) {
+func gameToJSON(g interface{}, fileName string) {
 	jd, err := json.MarshalIndent(g, "", "    ")
 	if err != nil {
 		log.Fatalf("Error marshaling to JSON: %v", err)
 	}
 
-	file, err := os.Create("test.json")
+	file, err := os.Create(fileName)
 	if err != nil {
 		log.Fatalf("Error creating file: %v", err)
 	}
@@ -52,9 +63,9 @@ func gameToJSON(g interface{}) {
 	}
 }
 
-// Write .slp to .csv -- WIP
-func gameToCSV(g interface{}) error {
-	file, err := os.Create("frames.csv")
+// Write .slp to .csv
+func gameToCSV(g interface{}, fileName string) error {
+	file, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -65,12 +76,12 @@ func gameToCSV(g interface{}) error {
 
 	jd, err := json.MarshalIndent(g, "", "    ")
 	if err != nil {
-		log.Fatalf("Error marshaling to JSON: %v", err)
+		panic(err)
 	}
 
 	var d map[string]interface{}
 	if err := json.Unmarshal(jd, &d); err != nil {
-		log.Fatalf("Error unmarshaling JSON: %v", err)
+		panic(err)
 	}
 
 	data := d["Data"].(map[string]interface{})
@@ -89,7 +100,7 @@ func gameToCSV(g interface{}) error {
 	flatMap := make(map[string]string)
 	flattenMap(sample, "", flatMap)
 
-	keys, err := sortedNumericKeys(flatMap)
+	keys, err := sortedKeys(flatMap)
 	if err != nil {
 		return err
 	}
@@ -98,8 +109,6 @@ func gameToCSV(g interface{}) error {
 	if err := writer.Write(k); err != nil {
 		return err
 	}
-
-	// Everything to here is keep
 
 	// This is iterating beyond the elements of the list (by one) ...
 	for _, j := range frameMap {
@@ -119,15 +128,10 @@ func gameToCSV(g interface{}) error {
 			return err
 		}
 	}
-
 	return nil
-
 }
 
-/*
-flattenMap is a recursive function that flattens a nested map into a flat map with composite keys.
-nestedMap: The
-*/
+// flattenMap is a recursive function that flattens a nested maps into a flat map with composite keys.
 func flattenMap(nestedMap map[string]interface{}, prefix string, flatMap map[string]string) {
 	for key, value := range nestedMap {
 		fullKey := key
@@ -153,8 +157,7 @@ func flattenMap(nestedMap map[string]interface{}, prefix string, flatMap map[str
 	}
 }
 
-// TODO: This is not returning in the correct order: (-1, -10, -100, ... 0, 10, 100)
-func sortedNumericKeys(m map[string]string) ([]string, error) {
+func sortedKeys(m map[string]string) ([]string, error) {
 	keys := make([]string, 0, len(m))
 	positiveKeys := []string{}
 	negativeKeys := []string{}
@@ -170,9 +173,35 @@ func sortedNumericKeys(m map[string]string) ([]string, error) {
 	sort.Strings(positiveKeys)
 	sort.Strings(negativeKeys)
 
-	// Concatenate negative keys followed by positive keys
 	keys = append(keys, negativeKeys...)
 	keys = append(keys, positiveKeys...)
 
 	return keys, nil
+}
+
+func bulkProcessing() {
+	f, _ := os.ReadDir("slp")
+	for _, j := range f {
+		// This anonymous function allows the program to skip over corrupted files
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("panic occured: ", r)
+				}
+			}()
+
+			filePath := "slp/" + j.Name()
+			fileName := "csv/" + j.Name()[:len(j.Name())-4] + ".csv"
+
+			game, err := slippi.ParseGame(filePath)
+			if err != nil {
+				panic(err)
+			}
+
+			err = gameToCSV(game, fileName)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
 }

@@ -1,5 +1,7 @@
 test.json
 frames.csv
-*.slp
-*.json
-*.csv
+slp/*
+json/*
+csv/*
+Sample.json
+Sample.csv

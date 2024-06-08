@@ -46,20 +46,19 @@ func main() {
 
 // Write .slp to .json
 func gameToJSON(g interface{}, fileName string) {
-	jd, err := json.MarshalIndent(g, "", "    ")
-	if err != nil {
-		log.Fatalf("Error marshaling to JSON: %v", err)
-	}
-
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Fatalf("Error creating file: %v", err)
+		panic(err)
 	}
 	defer file.Close()
 
+	jd, err := json.MarshalIndent(g, "", "    ")
+	if err != nil {
+		panic(err)
+	}
 	_, err = file.Write(jd)
 	if err != nil {
-		log.Fatalf("Error writing JSON to file: %v", err)
+		panic(err)
 	}
 }
 

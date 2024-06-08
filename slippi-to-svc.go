@@ -20,14 +20,13 @@ import (
 	slippi "github.com/pmcca/go-slippi"
 )
 
-/*	- Work through csv mapping		[X]
-	- Read all slp from /slp		[X]
-	- Write all csv to /csv & /json	[X]
-	- Concurrency					[]
+/*	TODO:
+	- Concurrency
+	- Add directory structure
+	- ...
 */
 
 func main() {
-	// 450 files in 5 minutes
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	bulkProcessing()

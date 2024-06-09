@@ -1,6 +1,7 @@
 // Convert .slp files to .csv or .json files for downstream processing and Deep Learning.
 //
-// This package contains two callables;
+// This package contains three callables;
+//   - bulkProcessing
 //   - gameToJSON
 //   - gameToCSV
 //
@@ -11,7 +12,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -27,12 +27,11 @@ import (
 */
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	bulkProcessing()
+	bulkProcessing("json")
 
 	// Create a single file -- reference
-	// filePath := "slp/Day 3-Game_20210718T094500.slp"
+	// filePath := "slp/Game_20210513T155703.slp"
 	// game, err := slippi.ParseGame(filePath)
 	// if err != nil {
 	// 	log.Fatal(err)
@@ -44,7 +43,7 @@ func main() {
 }
 
 // Write .slp to .json
-func gameToJSON(g interface{}, fileName string) {
+func gameToJSON(g interface{}, fileName string) error {
 	file, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
@@ -59,6 +58,7 @@ func gameToJSON(g interface{}, fileName string) {
 	if err != nil {
 		panic(err)
 	}
+	return nil
 }
 
 // Write .slp to .csv
@@ -177,7 +177,7 @@ func sortedKeys(m map[string]string) ([]string, error) {
 	return keys, nil
 }
 
-func bulkProcessing() {
+func bulkProcessing(fileType string) {
 	f, _ := os.ReadDir("slp")
 	for _, j := range f {
 		// This anonymous function allows the program to skip over corrupted files
@@ -189,17 +189,26 @@ func bulkProcessing() {
 			}()
 
 			filePath := "slp/" + j.Name()
-			fileName := "csv/" + j.Name()[:len(j.Name())-4] + ".csv"
+			fileName := fileType + "/" + j.Name()[:len(j.Name())-4] + "." + fileType
 
 			game, err := slippi.ParseGame(filePath)
 			if err != nil {
 				panic(err)
 			}
 
-			err = gameToCSV(game, fileName)
-			if err != nil {
-				panic(err)
+			switch fileType {
+			case "json":
+				err = gameToJSON(game, fileName)
+				if err != nil {
+					panic(err)
+				}
+			default:
+				err = gameToCSV(game, fileName)
+				if err != nil {
+					panic(err)
+				}
 			}
+
 		}()
 	}
 }

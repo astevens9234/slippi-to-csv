@@ -34,7 +34,7 @@ func main() {
 	// filePath := "slp/Game_20210513T155703.slp"
 	// game, err := slippi.ParseGame(filePath)
 	// if err != nil {
-	// 	log.Fatal(err)
+	// 	panic(err)
 	// }
 
 	// gameToJSON(game, "json/Sample.json")
@@ -95,6 +95,8 @@ func gameToCSV(g interface{}, fileName string) error {
 	if perr != nil {
 		panic(perr)
 	}
+
+	fmt.Println(pKeys)
 
 	// Drop all of the item columns
 	pKeys = pKeys[40:] 

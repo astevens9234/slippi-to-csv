@@ -28,7 +28,7 @@ import (
 
 func main() {
 
-	bulkProcessing("json")
+	bulkProcessing("csv")
 
 	// Create a single file -- reference
 	// filePath := "slp/Game_20210513T155703.slp"
@@ -82,8 +82,27 @@ func gameToCSV(g interface{}, fileName string) error {
 		panic(err)
 	}
 
+	// Parsing
 	data := d["Data"].(map[string]interface{})
 	frames := data["Frames"].(map[string]interface{})
+	gameStart := data["GameStart"].(map[string]interface{})
+
+	// Extract deterministic gamestate/player data
+	p := make(map[string]string)
+	flattenMap(gameStart, "", p)
+
+	pKeys, perr := sortedKeys(p)
+	if perr != nil {
+		panic(perr)
+	}
+
+	// Drop all of the item columns
+	pKeys = pKeys[40:] 
+
+	player := []string{}
+	for _, h := range pKeys {
+		player = append(player, p[h])
+	}
 
 	// Get All Frame Nums
 	frameMap := []int{}
@@ -94,21 +113,23 @@ func gameToCSV(g interface{}, fileName string) error {
 	sort.Ints(frameMap)
 
 	frameNumber := "0"
-	sample := frames[frameNumber].(map[string]interface{})
+	frame := frames[frameNumber].(map[string]interface{})
 	flatMap := make(map[string]string)
-	flattenMap(sample, "", flatMap)
+	flattenMap(frame, "", flatMap)
 
 	keys, err := sortedKeys(flatMap)
 	if err != nil {
 		return err
 	}
 
-	k := append([]string{"Index"}, keys...)
+	// Header of the CSV
+	k := append([]string{"Index"}, pKeys...)
+	k = append(k, keys...)
 	if err := writer.Write(k); err != nil {
 		return err
 	}
 
-	// This is iterating beyond the elements of the list (by one) ...
+	// Rows of the CSV
 	for _, j := range frameMap {
 		frameNumber = strconv.Itoa(j)
 
@@ -118,8 +139,9 @@ func gameToCSV(g interface{}, fileName string) error {
 
 		row := []string{}
 		row = append([]string{frameNumber}, row...)
-		for _, j := range keys {
-			row = append(row, flatMap[j])
+		row = append(row, player...)
+		for _, m := range keys {
+			row = append(row, flatMap[m])
 		}
 
 		if err := writer.Write(row); err != nil {
